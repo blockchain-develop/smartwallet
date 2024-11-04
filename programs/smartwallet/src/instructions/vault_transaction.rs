@@ -6,49 +6,56 @@ use solana_program::native_token::LAMPORTS_PER_SOL;
 use crate::errors::MultisigError;
 use crate::state::*;
 
+use solana_program::sysvar::instructions::{
+    load_current_index_checked, load_instruction_at_checked, ID as IX_ID,
+};
+
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct WalletCreateArgs {
-    pub owner: Pubkey,
-    /// Memo is used for indexing only.
-    pub memo: Option<String>,
+pub struct VaultTransactionArgs {
+    pub signs: Vec<u8>,
 }
 
 #[derive(Accounts)]
-#[instruction(args: WalletCreateArgs)]
-pub struct WalletCreate<'info> {
+#[instruction(args: VaultTransactionArgs)]
+pub struct VaultTransaction<'info> {
     #[account(
-        init,
-        payer = creator,
-        space = Wallet::size(),
         seeds = [SEED_PREFIX, SEED_MULTISIG, owner.key().as_ref()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
 
-    /// An ephemeral signer that is used as a seed for the Multisig PDA.
-    /// Must be a signer to prevent front-running attack by someone else but the original creator.
-    pub owner: Signer<'info>,
+    /// CHECK:
+    pub owner: AccountInfo<'info>,
 
     /// The creator of the multisig.
     #[account(mut)]
-    pub creator: Signer<'info>,
+    pub payer: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
+    /// CHECK:
+    #[account(address = IX_ID)]
+    pub ix_sysvar: AccountInfo<'info>,
 }
 
-impl WalletCreate<'_> {
+impl VaultTransaction<'_> {
     fn validate(&self) -> Result<()> {
         Ok(())
     }
 
     /// Creates a multisig.
     #[access_control(ctx.accounts.validate())]
-    pub fn multisig_create(ctx: Context<Self>, args: WalletCreateArgs) -> Result<()> {
+    pub fn execute(ctx: Context<Self>, args: VaultTransactionArgs) -> Result<()> {
+        //
+        let index = load_current_index_checked(&ctx.accounts.ix_sysvar)?;
+        let instruction = load_instruction_at_checked(index as usize, &ctx.accounts.ix_sysvar)?;
+
+        // Initialize the multisig.
         // Initialize the multisig.
         let multisig = &mut ctx.accounts.wallet;
         multisig.transaction_index = 0;
         multisig.create_key = ctx.accounts.owner.key();
         multisig.bump = ctx.bumps.wallet;
+
+        //
 
         Ok(())
     }

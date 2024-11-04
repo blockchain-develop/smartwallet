@@ -13,12 +13,15 @@ declare_id!("GK4YSUwdKdauZbbEvutnn5Swdg1yKaZwYCym5YuaQDPd");
 pub mod smartwallet {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        Ok(())
+    pub fn wallet_create(ctx: Context<WalletCreate>, args: WalletCreateArgs) -> Result<()> {
+        WalletCreate::multisig_create(ctx, args)
     }
 
-    pub fn wallet_create(ctx: Context<WalletCreate>, args: WalletCreateArgs) -> Result<()> {
-        Ok(())
+    pub fn execute_transaction(
+        ctx: Context<VaultTransaction>,
+        args: VaultTransactionArgs,
+    ) -> Result<()> {
+        VaultTransaction::execute(ctx, args)
     }
 }
 
