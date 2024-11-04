@@ -11,7 +11,7 @@ pub const MAX_TIME_LOCK: u32 = 3 * 30 * 24 * 60 * 60; // 3 months
 #[account]
 pub struct Wallet {
     /// Key that is used to seed the multisig PDA.
-    pub create_key: Pubkey,
+    pub owner: Vec<u8>,
     /// Last transaction index. 0 means no transactions have been created.
     pub transaction_index: u64,
     /// Bump for the multisig PDA seed.

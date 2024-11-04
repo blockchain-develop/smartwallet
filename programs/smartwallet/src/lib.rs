@@ -14,7 +14,7 @@ pub mod smartwallet {
     use super::*;
 
     pub fn wallet_create(ctx: Context<WalletCreate>, args: WalletCreateArgs) -> Result<()> {
-        WalletCreate::multisig_create(ctx, args)
+        WalletCreate::create(ctx, args)
     }
 
     pub fn execute_transaction(
