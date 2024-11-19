@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Smartwallet } from "../target/types/smartwallet";
-const { Keypair, ConfirmOptions } = require("@solana/web3.js");
+import { Smartwallet } from "./../target/types/smartwallet";
+const { Keypair, ConfirmOptions, PublicKey } = require("@solana/web3.js");
 
 async function main() {
   const url = anchor.web3.clusterApiUrl("devnet");
@@ -16,12 +16,24 @@ async function main() {
   const program = anchor.workspace.Smartwallet as Program<Smartwallet>;
 
   const owner = Buffer.from('1699ede87439081722ba0d5d210d8c4e351cbf98a97ff6c2a770cc9c71abd219', 'hex');
-  const tx = await program.methods.walletCreate(
-    {
-      owner: owner,
+  const systemProgarmAddress = anchor.web3.SystemProgram.programId;
+  const programAddress = new PublicKey('ye56RjR2rNTtj9Fw1TmVpefmV3YCup3sWtCzKi3v22R');
 
-    },
-  ).rpc();
+  let smartWalletAddress, _ = await PublicKey.findProgramAddress(
+    ['wallet', 'wallet', owner],
+    programAddress,
+  );
+  const tx = await program.methods
+    .walletCreate({
+      owner: owner,
+    })
+    .accounts({
+      wallet: smartWalletAddress,
+      creator: wallet.publicKey,
+      systemProgram: systemProgarmAddress,
+    })
+    .signers([wallet.payer])
+    .rpc();
   console.log("transaction signature", tx);
 }
 
