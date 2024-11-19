@@ -1,13 +1,13 @@
 [toolchain]
-anchor_version = "0.29.0" # `anchor-cli` version to use
-solana_version = "1.17.0" # Solana version to use
+anchor_version = "0.29.0"
+solana_version = "1.17.0"
 
 [features]
 seeds = false
 skip-lint = false
 
 [programs.localnet]
-smartwallet = "GK4YSUwdKdauZbbEvutnn5Swdg1yKaZwYCym5YuaQDPd"
+smartwallet = "ye56RjR2rNTtj9Fw1TmVpefmV3YCup3sWtCzKi3v22R"
 
 [registry]
 url = "https://api.apr.dev"

@@ -7,7 +7,7 @@ pub mod errors;
 pub mod instructions;
 pub mod state;
 
-declare_id!("GK4YSUwdKdauZbbEvutnn5Swdg1yKaZwYCym5YuaQDPd");
+declare_id!("ye56RjR2rNTtj9Fw1TmVpefmV3YCup3sWtCzKi3v22R");
 
 #[program]
 pub mod smartwallet {
