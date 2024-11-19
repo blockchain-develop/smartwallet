@@ -13,7 +13,7 @@ smartwallet = "ye56RjR2rNTtj9Fw1TmVpefmV3YCup3sWtCzKi3v22R"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/root/.config/solana/id.json"
 
 [scripts]

@@ -8,11 +8,14 @@ async function main() {
   let privKey
   do {
     privKey = randomBytes(32)
-  } while (!secp256k1.priveteKeyVerify(privKey))
+  } while (!secp256k1.privateKeyVerify(privKey))
+  const pubKey = secp256k1.publicKeyCreate(privKey)
 
-  const pubKey = secp256k1.pubKeyCreate(privKey)
+  const privKeyHex = Buffer.from(privKey).toString('hex')
+  const pubKeyHex = Buffer.from(pubKey).toString('hex')
 
-  console.log(privKey, pubKey)
+  console.log('public key: ', pubKeyHex)
+  console.log('private key: ', privKeyHex)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
