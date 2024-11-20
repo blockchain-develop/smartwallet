@@ -5,6 +5,7 @@ use solana_program::native_token::LAMPORTS_PER_SOL;
 
 use crate::errors::WalletError;
 use crate::state::*;
+use std::str;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct WalletCreateArgs {
@@ -38,6 +39,9 @@ impl WalletCreate<'_> {
     /// Creates a multisig.
     #[access_control(ctx.accounts.validate())]
     pub fn create(ctx: Context<Self>, args: WalletCreateArgs) -> Result<()> {
+        //
+        let args_owner = str::from_utf8(args.owner.as_slice()).ok().unwrap();
+        msg!("parameter owner: {}", args_owner);
         // Initialize the multisig.
         let wallet = &mut ctx.accounts.wallet;
         wallet.transaction_index = 0;

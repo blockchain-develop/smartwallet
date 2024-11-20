@@ -1,11 +1,14 @@
 #![allow(deprecated)]
+#![warn(unsafe_op_in_unsafe_fn)]
 use crate::errors::WalletError;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use core::str;
 use secp256k1::{ecdsa, Message, PublicKey, Secp256k1};
 use sha3::Digest;
 use solana_program::instruction::Instruction;
+use solana_program::msg;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program::{invoke, invoke_signed};
 
@@ -49,9 +52,22 @@ impl VaultTransaction<'_> {
     /// Creates a multisig.
     #[access_control(ctx.accounts.validate())]
     pub fn execute(ctx: Context<Self>, args: VaultTransactionArgs) -> Result<()> {
+        //
+        //let x = args.owner.as_slice();
+        //let args_owner = format!("{:x}", &x);
+        let args_owner = to_hex_string(&args.owner);
+        msg!("parameter owner: {}", args_owner);
+
+        let args_signs = to_hex_string(&args.signs);
+        msg!("parameter signs: {}", args_signs);
+
+        let args_data = to_hex_string(&args.data);
+        msg!("parameter data: {}", args_data);
+
         // get the instrction
         let index = load_current_index_checked(&ctx.accounts.ix_sysvar)?;
         let ix = load_instruction_at_checked(index as usize, &ctx.accounts.ix_sysvar)?;
+        msg!("instruction index: {}", index);
 
         // verify signature
         // todo,
@@ -99,7 +115,8 @@ impl VaultTransaction<'_> {
                 data: args.data,
             },
             &nstruction_account_infos[..],
-            &[&seeds(args.owner.as_slice())],
+            &[&[SEED_PREFIX, SEED_WALLET, args.owner.as_slice()]],
+            // & [&seeds(args.owner.as_slice())],
         )?;
 
         Ok(())
@@ -232,4 +249,9 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
     msg!("Verification succeeded!");
 
     Ok(())
+}
+
+pub fn to_hex_string(bytes: &Vec<u8>) -> String {
+    let strs: Vec<String> = bytes.iter().map(|b| format!("{:02X}", b)).collect();
+    strs.connect(" ")
 }
