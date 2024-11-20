@@ -3,6 +3,8 @@ use crate::errors::WalletError;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use secp256k1::{ecdsa, Message, PublicKey, Secp256k1};
+use sha3::Digest;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program::{invoke, invoke_signed};
@@ -55,14 +57,29 @@ impl VaultTransaction<'_> {
         // todo,
         // 1. how to verify signature
         // 2. the data ?
-        check_secp256k1_data(
-            &ix.data,
-            args.owner.as_slice(),
-            b"",
-            args.signs.as_slice(),
-            0,
-        )?;
+        /*
+                check_secp256k1_data(
+                    &ix.data,
+                    args.owner.as_slice(),
+                    b"",
+                    args.signs.as_slice(),
+                    0,
+                )?;
+        */
 
+        /*
+                let mut hasher = sha3::Keccak256::new();
+                hasher.update(ix.data);
+                let message_hash = hasher.finalize();
+
+                let secp = Secp256k1::new();
+                let message = Message::from_digest(message_hash.into());
+                let sign = ecdsa::Signature::from_compact(args.signs.as_slice()).ok();
+                let public_key = PublicKey::from_slice(args.owner.as_slice()).ok();
+                let verified = secp
+                    .verify_ecdsa(&message, &sign.unwrap(), &public_key.unwrap())
+                    .is_ok();
+        */
         // execute this instruction
         let mut instruction_accounts = vec![];
         let mut nstruction_account_infos = vec![];

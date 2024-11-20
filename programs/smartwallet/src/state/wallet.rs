@@ -21,8 +21,9 @@ pub struct Wallet {
 impl Wallet {
     pub fn size() -> usize {
         8  + // anchor account discriminator
-        32 + // create_key
+        32 + 1 + // create_key
         8  + // transaction_index
-        1 // bump
+        1 +  // bump
+        32
     }
 }

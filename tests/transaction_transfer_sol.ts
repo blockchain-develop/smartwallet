@@ -3,6 +3,8 @@ import { Program } from "@coral-xyz/anchor";
 import { Smartwallet } from "./../target/types/smartwallet";
 import idl from "./../target/idl/smartwallet.json";
 const { Keypair, ConfirmOptions, PublicKey } = require("@solana/web3.js");
+const secp256k1 = require('secp256k1');
+const { ethers, utils } = require("ethers");
 
 async function main() {
   const url = anchor.web3.clusterApiUrl("devnet");
@@ -24,7 +26,7 @@ async function main() {
   //console.log("program", program)
 
   const owner = Buffer.from('024e1e9e0de1a665cbbcaaa4c3e9388e5900adc9ff5b9676f3b973dbe8b2b3aa', 'hex');
-  const systemProgarmAddress = anchor.web3.SystemProgram.programId;
+  const sysvarProgarmAddress = new PublicKey('Sysvar1nstructions1111111111111111111111111');
 
   let [smartWalletAddress, bump] = await PublicKey.findProgramAddress(
     ['wallet', 'wallet', owner],
@@ -32,15 +34,51 @@ async function main() {
   );
   console.log('smart wallet address: ', smartWalletAddress)
   console.log('bump: ', bump)
+  //
+  const receipt = new PublicKey('2ZUhLpkBwxvZakU5gA7J3pMLnPhfyZZGQY9ArJtFPLqw');
+  const transferInstuction = anchor.web3.SystemProgram.transfer({
+    fromPubkey: smartWalletAddress,
+    toPubkey: receipt,
+    lamports: 1000000,
+  })
+  //
+  const privKey = Buffer.from('6c35d4230c67d604a129d5b9de1cd2667096d93d0b0ec01512d21d1a30fe7676', 'hex');
+  const pubKey = Buffer.from('03024e1e9e0de1a665cbbcaaa4c3e9388e5900adc9ff5b9676f3b973dbe8b2b3aa', 'hex');
+  const messageHash = ethers.keccak256(transferInstuction.data).slice(2, 66);
+  console.log('message hash: ', messageHash);
+  const messageHashBytes = Buffer.from(messageHash, 'hex');
+  //const hash = Uint8Array.from(messageHashBytes)
+  const signObj = secp256k1.ecdsaSign(messageHashBytes, privKey);
+  console.log(secp256k1.ecdsaVerify(signObj.signature, messageHashBytes, pubKey));
+  //
   const tx = await program.methods
-    .walletCreate({
+    .executeTransaction({
       owner: owner,
+      signs: Buffer.from(signObj.signature),
+      data: transferInstuction.data,
     })
     .accounts({
       wallet: smartWalletAddress,
-      creator: wallet.publicKey,
-      systemProgram: systemProgarmAddress,
+      payer: wallet.publicKey,
+      ixSysvar: sysvarProgarmAddress,
+      program: anchor.web3.SystemProgram.programId,
     })
+    .remainingAccounts(
+      //transferInstuction.keys,
+      [
+        {
+          isSigner: false,
+          isWritable: true,
+          pubkey: smartWalletAddress,
+        },
+        {
+          isSigner: false,
+          isWritable: true,
+          pubkey: receipt,
+        }
+      ]
+
+    )
     .signers([wallet.payer])
     .rpc();
   console.log("transaction signature", tx);

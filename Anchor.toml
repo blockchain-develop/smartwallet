@@ -7,13 +7,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-smartwallet = "ye56RjR2rNTtj9Fw1TmVpefmV3YCup3sWtCzKi3v22R"
+smartwallet = "C7iFDZry7Kdg7gc829qBCPEPKKdDkf1gRMxNxDEqeYUX"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "Devnet"
 wallet = "/root/.config/solana/id.json"
 
 [scripts]

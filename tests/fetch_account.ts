@@ -18,32 +18,13 @@ async function main() {
   console.log('private key: ', privKeyHex)
   const provider = new anchor.AnchorProvider(connection, wallet, {});
   anchor.setProvider(provider);
-  const programAddress = new PublicKey('C7iFDZry7Kdg7gc829qBCPEPKKdDkf1gRMxNxDEqeYUX');
-  //const program = new Program(idl as Smartwallet, programAddress, provider);
-  let program = anchor.workspace.Smartwallet as Program<Smartwallet>;
-  //console.log("program", program)
+  const program = anchor.workspace.Smartwallet as Program<Smartwallet>;
+  const smartWalletAddress = new PublicKey('45iALtuPD8NfzNYCTgjbC53PCnHWzHg3mEiBXmMdK56w');
+  const smartWallet = await program.account.wallet.fetch(smartWalletAddress);
 
-  const owner = Buffer.from('024e1e9e0de1a665cbbcaaa4c3e9388e5900adc9ff5b9676f3b973dbe8b2b3aa', 'hex');
-  const systemProgarmAddress = anchor.web3.SystemProgram.programId;
-
-  let [smartWalletAddress, bump] = await PublicKey.findProgramAddress(
-    ['wallet', 'wallet', owner],
-    programAddress,
-  );
-  console.log('smart wallet address: ', smartWalletAddress)
-  console.log('bump: ', bump)
-  const tx = await program.methods
-    .walletCreate({
-      owner: owner,
-    })
-    .accounts({
-      wallet: smartWalletAddress,
-      creator: wallet.publicKey,
-      systemProgram: systemProgarmAddress,
-    })
-    .signers([wallet.payer])
-    .rpc();
-  console.log("transaction signature", tx);
+  console.log("transaction index", smartWallet.transactionIndex);
+  console.log("transaction owner", Buffer.from(smartWallet.owner).toString('hex'));
+  console.log("transaction bump", smartWallet.bump);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
