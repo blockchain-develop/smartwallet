@@ -63,6 +63,7 @@ async function main() {
       owner: owner,
       signs: Buffer.from(signObj.signature),
       data: transferInstuction.data,
+      recoveryId: signObj.recoveryId,
     })
     .accounts({
       wallet: smartWalletAddress,

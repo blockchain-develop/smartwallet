@@ -12,15 +12,20 @@ use solana_program::msg;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::pubkey::Pubkey;
+use solana_program::secp256k1_program;
+use solana_program::secp256k1_program::ID as SECP256K1_ID;
 
 use solana_program::sysvar::instructions::{
     load_current_index_checked, load_instruction_at_checked, ID as IX_ID,
 };
 
+use solana_program::secp256k1_recover;
+
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct VaultTransactionArgs {
     pub owner: Vec<u8>,
     pub signs: Vec<u8>,
+    pub recovery_id: u8,
     pub data: Vec<u8>,
 }
 
@@ -69,6 +74,55 @@ impl VaultTransaction<'_> {
         let index = load_current_index_checked(&ctx.accounts.ix_sysvar)?;
         let ix = load_instruction_at_checked(index as usize, &ctx.accounts.ix_sysvar)?;
         msg!("instruction index: {}", index);
+
+        let message_hash = {
+            let mut hasher = solana_program::keccak::Hasher::default();
+            hasher.hash(&args.data.as_slice());
+            hasher.result()
+        };
+
+        msg!("msg hash: {}", to_hex_string(&message_hash.try_to_vec()?));
+        let public_key = match secp256k1_recover::secp256k1_recover(
+            message_hash.try_to_vec()?.as_slice(),
+            args.recovery_id,
+            args.signs.as_slice(),
+        ) {
+            Ok(k) => k,
+            Err(e) => {
+                msg!("{}", e);
+                return Err(WalletError::Unauthorized.into());
+            }
+        };
+        let mut com_public_key = public_key.try_to_vec()?;
+        com_public_key.resize(32, 0);
+
+        msg!("recover public key: {}", to_hex_string(&com_public_key));
+
+        if com_public_key.as_slice() != args.owner.as_slice() {
+            return Err(WalletError::Unauthorized.into());
+        }
+
+        /*
+        if index <= 0 {
+            return Err(WalletError::Unauthorized.into());
+        }
+
+        let verification_index = index - 1;
+        let verification_ix =
+            load_instruction_at_checked(verification_index as usize, &ctx.accounts.ix_sysvar)?;
+
+        if verification_ix.program_id != SECP256K1_ID || verification_ix.accounts.len() != 0 {
+            return Err(WalletError::Unauthorized.into());
+        }
+
+        check_secp256k1_data(
+            &verification_ix.data,
+            ctx.accounts.wallet.owner.as_slice(),
+            &ix.data,
+            args.signs.as_slice(),
+            0,
+        )?;
+        */
 
         // verify signature
         // todo,
