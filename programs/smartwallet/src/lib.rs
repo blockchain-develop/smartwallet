@@ -6,6 +6,7 @@ pub use state::*;
 pub mod errors;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 declare_id!("C7iFDZry7Kdg7gc829qBCPEPKKdDkf1gRMxNxDEqeYUX");
 
@@ -24,6 +25,3 @@ pub mod smartwallet {
         VaultTransaction::execute(ctx, args)
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize {}

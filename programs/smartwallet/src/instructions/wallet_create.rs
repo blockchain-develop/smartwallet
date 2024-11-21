@@ -1,12 +1,9 @@
 #![allow(deprecated)]
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 
-use crate::errors::WalletError;
 use crate::state::*;
+use crate::utils::*;
 use solana_program::pubkey::Pubkey;
-use std::str;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct WalletCreateArgs {
@@ -37,30 +34,31 @@ impl WalletCreate<'_> {
         Ok(())
     }
 
-    /// Creates a multisig.
     #[access_control(ctx.accounts.validate())]
     pub fn create(ctx: Context<Self>, args: WalletCreateArgs) -> Result<()> {
-        //
+        msg!("create");
+
         let args_owner = to_hex_string(&args.owner);
         msg!("parameter owner: {}", args_owner);
 
-        let owner_seeds = args.owner.as_slice();
-        msg!("{}", owner_seeds.len());
-        // Initialize the multisig.
-        let seeds = &[SEED_WALLET, SEED_OWNER, owner_seeds];
-        let (pda, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
-        msg!("new wallet owner address: {}", pda);
-        msg!("new wallet bump: {}", bump);
+        // todo
+        // this wallet is created?
+
+        let seeds_owner = args.owner.as_slice();
+        msg!("{}", seeds_owner.len());
+
+        let seeds = &[SEED_WALLET, SEED_OWNER, seeds_owner];
+        let (wallet_owner_address, wallet_owner_bump) =
+            Pubkey::find_program_address(seeds, ctx.program_id);
+        msg!("wallet owner address: {}", wallet_owner_address);
+        msg!("wallet owner bump: {}", wallet_owner_bump);
+
+        // Initialize the wallet info.
         let wallet = &mut ctx.accounts.wallet;
         wallet.transaction_index = 0;
         wallet.owner = args.owner;
-        wallet.bump = bump;
+        wallet.bump = wallet_owner_bump;
 
         Ok(())
     }
-}
-
-pub fn to_hex_string(bytes: &Vec<u8>) -> String {
-    let strs: Vec<String> = bytes.iter().map(|b| format!("{:02X}", b)).collect();
-    strs.connect("")
 }
