@@ -5,6 +5,7 @@ use solana_program::native_token::LAMPORTS_PER_SOL;
 
 use crate::errors::WalletError;
 use crate::state::*;
+use solana_program::pubkey::Pubkey;
 use std::str;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -19,7 +20,7 @@ pub struct WalletCreate<'info> {
         init,
         payer = creator,
         space = Wallet::size(),
-        seeds = [SEED_PREFIX, SEED_WALLET, args.owner.as_slice()],
+        seeds = [SEED_WALLET, SEED_CONFIG, args.owner.as_slice()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
@@ -40,14 +41,26 @@ impl WalletCreate<'_> {
     #[access_control(ctx.accounts.validate())]
     pub fn create(ctx: Context<Self>, args: WalletCreateArgs) -> Result<()> {
         //
-        let args_owner = str::from_utf8(args.owner.as_slice()).ok().unwrap();
+        let args_owner = to_hex_string(&args.owner);
         msg!("parameter owner: {}", args_owner);
+
+        let owner_seeds = args.owner.as_slice();
+        msg!("{}", owner_seeds.len());
         // Initialize the multisig.
+        let seeds = &[SEED_WALLET, SEED_OWNER, owner_seeds];
+        let (pda, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
+        msg!("new wallet owner address: {}", pda);
+        msg!("new wallet bump: {}", bump);
         let wallet = &mut ctx.accounts.wallet;
         wallet.transaction_index = 0;
         wallet.owner = args.owner;
-        wallet.bump = ctx.bumps.wallet;
+        wallet.bump = bump;
 
         Ok(())
     }
+}
+
+pub fn to_hex_string(bytes: &Vec<u8>) -> String {
+    let strs: Vec<String> = bytes.iter().map(|b| format!("{:02X}", b)).collect();
+    strs.connect("")
 }

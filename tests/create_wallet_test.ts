@@ -27,7 +27,7 @@ async function main() {
   const systemProgarmAddress = anchor.web3.SystemProgram.programId;
 
   let [smartWalletAddress, bump] = await PublicKey.findProgramAddress(
-    ['wallet', 'wallet', owner],
+    ['wallet', 'config', owner],
     programAddress,
   );
   console.log('smart wallet address: ', smartWalletAddress)

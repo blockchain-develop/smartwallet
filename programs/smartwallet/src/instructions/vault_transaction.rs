@@ -11,6 +11,7 @@ use solana_program::instruction::Instruction;
 use solana_program::msg;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program::{invoke, invoke_signed};
+use solana_program::pubkey::Pubkey;
 
 use solana_program::sysvar::instructions::{
     load_current_index_checked, load_instruction_at_checked, ID as IX_ID,
@@ -27,7 +28,7 @@ pub struct VaultTransactionArgs {
 #[instruction(args: VaultTransactionArgs)]
 pub struct VaultTransaction<'info> {
     #[account(
-        seeds = [SEED_PREFIX, SEED_WALLET, args.owner.as_slice()],
+        seeds = [SEED_WALLET, SEED_CONFIG, args.owner.as_slice()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
@@ -97,34 +98,52 @@ impl VaultTransaction<'_> {
                     .is_ok();
         */
         // execute this instruction
+        let owner_seeds = args.owner.as_slice();
+        msg!("{}", owner_seeds.len());
+        let seeds = &[
+            SEED_WALLET,
+            SEED_OWNER,
+            owner_seeds,
+            &[ctx.accounts.wallet.bump],
+        ];
+        let smart_wallet_address = match Pubkey::create_program_address(seeds, ctx.program_id) {
+            Ok(address) => address,
+            Err(e) => {
+                msg!("{}", e);
+                return Err(WalletError::Unauthorized.into());
+            }
+        };
         let mut instruction_accounts = vec![];
-        let mut nstruction_account_infos = vec![];
+        let mut instruction_account_infos = vec![];
         for account_info in ctx.remaining_accounts.iter() {
-            instruction_accounts.push(AccountMeta {
-                pubkey: *account_info.key,
-                is_signer: account_info.is_signer,
-                is_writable: account_info.is_writable,
-            });
-            nstruction_account_infos.push(account_info.clone());
+            if *account_info.key == smart_wallet_address {
+                instruction_accounts.push(AccountMeta {
+                    pubkey: *account_info.key,
+                    is_signer: true,
+                    is_writable: account_info.is_writable,
+                });
+            } else {
+                instruction_accounts.push(AccountMeta {
+                    pubkey: *account_info.key,
+                    is_signer: account_info.is_signer,
+                    is_writable: account_info.is_writable,
+                });
+            }
+            instruction_account_infos.push(account_info.clone());
         }
-
         invoke_signed(
             &Instruction {
                 program_id: *ctx.accounts.program.key,
                 accounts: instruction_accounts,
                 data: args.data,
             },
-            &nstruction_account_infos[..],
-            &[&[SEED_PREFIX, SEED_WALLET, args.owner.as_slice()]],
+            &instruction_account_infos[..],
+            &[seeds],
             // & [&seeds(args.owner.as_slice())],
         )?;
 
         Ok(())
     }
-}
-
-pub fn seeds(owner: &[u8]) -> [&[u8]; 3] {
-    [&SEED_PREFIX, &SEED_WALLET, owner]
 }
 
 /// Verify serialized Secp256k1Program instruction data
@@ -253,5 +272,5 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
 
 pub fn to_hex_string(bytes: &Vec<u8>) -> String {
     let strs: Vec<String> = bytes.iter().map(|b| format!("{:02X}", b)).collect();
-    strs.connect(" ")
+    strs.connect("")
 }

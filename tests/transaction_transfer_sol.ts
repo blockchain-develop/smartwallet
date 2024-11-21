@@ -29,15 +29,22 @@ async function main() {
   const sysvarProgarmAddress = new PublicKey('Sysvar1nstructions1111111111111111111111111');
 
   let [smartWalletAddress, bump] = await PublicKey.findProgramAddress(
-    ['wallet', 'wallet', owner],
+    ['wallet', 'config', owner],
     programAddress,
   );
-  console.log('smart wallet address: ', smartWalletAddress)
+  console.log('smart wallet address: ', smartWalletAddress.toBase58())
   console.log('bump: ', bump)
+
+  let [ownerAddress, bump1] = await PublicKey.findProgramAddress(
+    ['wallet', 'owner', owner],
+    programAddress,
+  );
+  console.log('wallet owner address: ', ownerAddress.toBase58())
+  console.log('bump: ', bump1)
   //
   const receipt = new PublicKey('2ZUhLpkBwxvZakU5gA7J3pMLnPhfyZZGQY9ArJtFPLqw');
   const transferInstuction = anchor.web3.SystemProgram.transfer({
-    fromPubkey: smartWalletAddress,
+    fromPubkey: ownerAddress,
     toPubkey: receipt,
     lamports: 1000000,
   })
@@ -69,7 +76,7 @@ async function main() {
         {
           isSigner: false,
           isWritable: true,
-          pubkey: smartWalletAddress,
+          pubkey: ownerAddress,
         },
         {
           isSigner: false,
@@ -77,7 +84,6 @@ async function main() {
           pubkey: receipt,
         }
       ]
-
     )
     .signers([wallet.payer])
     .rpc();

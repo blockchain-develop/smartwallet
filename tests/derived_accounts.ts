@@ -19,12 +19,14 @@ async function main() {
   const provider = new anchor.AnchorProvider(connection, wallet, {});
   anchor.setProvider(provider);
   const program = anchor.workspace.Smartwallet as Program<Smartwallet>;
-  const smartWalletAddress = new PublicKey('8qY9P9LctEysD9kPpnxAUbHavFTiDC7iQHnba1gBedqV');
-  const smartWallet = await program.account.wallet.fetch(smartWalletAddress);
 
-  console.log("transaction index", smartWallet.transactionIndex);
-  console.log("transaction owner", Buffer.from(smartWallet.owner).toString('hex'));
-  console.log("transaction bump", smartWallet.bump);
+  const programAddress = new PublicKey('C7iFDZry7Kdg7gc829qBCPEPKKdDkf1gRMxNxDEqeYUX');
+  const owner = Buffer.from('024e1e9e0de1a665cbbcaaa4c3e9388e5900adc9ff5b9676f3b973dbe8b2b3aa', 'hex');
+  const [walletConfigAddress, bump1] = await PublicKey.findProgramAddress(["wallet", "config", owner], programAddress);
+  const [walletOwnerAddress, bump2] = await PublicKey.findProgramAddress(["wallet", "owner", owner], programAddress);
+
+  console.log("wallet config address: ", walletConfigAddress.toBase58(), "bump", bump1);
+  console.log("wallet owner address: ", walletOwnerAddress.toBase58(), "bump", bump2);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
