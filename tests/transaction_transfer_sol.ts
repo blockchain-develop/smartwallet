@@ -2,6 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Smartwallet } from "./../target/types/smartwallet";
 import idl from "./../target/idl/smartwallet.json";
+import { toBigInt } from "ethers";
 const { Keypair, ConfirmOptions, PublicKey } = require("@solana/web3.js");
 const secp256k1 = require('secp256k1');
 const { ethers, utils } = require("ethers");
@@ -48,10 +49,17 @@ async function main() {
     toPubkey: receipt,
     lamports: 1000000,
   })
+  transferInstuction.keys[1].isSigner = true;
+  let raw = encodeInstruction(transferInstuction);
+  let indexBuffer = Buffer.alloc(8);
+  indexBuffer.writeBigInt64LE(toBigInt(0));
+  raw = Buffer.concat([raw, indexBuffer]);
+  console.log('raw: ', raw.toString('hex'));
+
   //
   const privKey = Buffer.from('6c35d4230c67d604a129d5b9de1cd2667096d93d0b0ec01512d21d1a30fe7676', 'hex');
   const pubKey = Buffer.from('03024e1e9e0de1a665cbbcaaa4c3e9388e5900adc9ff5b9676f3b973dbe8b2b3aa', 'hex');
-  const messageHash = ethers.keccak256(transferInstuction.data).slice(2, 66);
+  const messageHash = ethers.keccak256(raw).slice(2, 66);
   console.log('message hash: ', messageHash);
   const messageHashBytes = Buffer.from(messageHash, 'hex');
   //const hash = Uint8Array.from(messageHashBytes)
@@ -68,7 +76,6 @@ async function main() {
     .accounts({
       wallet: smartWalletAddress,
       payer: wallet.publicKey,
-      ixSysvar: sysvarProgarmAddress,
       program: anchor.web3.SystemProgram.programId,
     })
     .remainingAccounts(
@@ -87,8 +94,42 @@ async function main() {
       ]
     )
     .signers([wallet.payer])
+    .preInstructions([
+      anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+        units: 400000,
+      })
+    ])
     .rpc();
   console.log("transaction signature", tx);
+}
+
+function encodeInstruction(a: anchor.web3.TransactionInstruction) {
+  console.log("program key: ", a.programId.toBuffer().toString('hex'));
+  console.log("data: ", a.data.toString('hex'));
+  var i: number;
+  for (i = 0; i < a.keys.length; i++) {
+    const key = a.keys[i];
+    console.log("number: ", i)
+    console.log("is signer: ", key.isSigner);
+    console.log("is writable: ", key.isWritable);
+    console.log("public key: ", key.pubkey);
+  }
+  //
+  const programIdBuffer = Buffer.alloc(32).fill(a.programId.toBuffer());
+  let keysBuffer = Buffer.alloc(8);
+  keysBuffer.writeBigInt64LE(toBigInt(a.keys.length));
+  for (i = 0; i < a.keys.length; i++) {
+    const key = a.keys[i];
+    let keyBuffer = Buffer.alloc(34).fill(key.pubkey.toBuffer());
+    keyBuffer.writeInt8(key.isSigner ? 1 : 0, 32);
+    keyBuffer.writeInt8(key.isWritable ? 1 : 0, 33);
+    keysBuffer = Buffer.concat([keysBuffer, keyBuffer]);
+  }
+  let dataBuffer = Buffer.alloc(8 + a.data.length);
+  dataBuffer.writeBigInt64LE(toBigInt(a.data.length));
+  dataBuffer.fill(a.data, 8);
+
+  return Buffer.concat([programIdBuffer, keysBuffer, dataBuffer]);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

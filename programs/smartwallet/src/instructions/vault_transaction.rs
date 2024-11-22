@@ -7,9 +7,6 @@ use solana_program::msg;
 use solana_program::program::invoke_signed;
 use solana_program::pubkey::Pubkey;
 use solana_program::secp256k1_recover;
-use solana_program::sysvar::instructions::{
-    load_current_index_checked, load_instruction_at_checked, ID as IX_ID,
-};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct VaultTransactionArgs {
@@ -23,6 +20,7 @@ pub struct VaultTransactionArgs {
 #[instruction(args: VaultTransactionArgs)]
 pub struct VaultTransaction<'info> {
     #[account(
+        mut,
         seeds = [SEED_WALLET, SEED_CONFIG, args.owner.as_slice()],
         bump
     )]
@@ -31,10 +29,6 @@ pub struct VaultTransaction<'info> {
     /// The creator of the multisig.
     #[account(mut)]
     pub payer: Signer<'info>,
-
-    /// CHECK:
-    #[account(address = IX_ID)]
-    pub ix_sysvar: AccountInfo<'info>,
 
     /// CHECK:
     pub program: AccountInfo<'info>,
@@ -61,45 +55,10 @@ impl VaultTransaction<'_> {
 
         // todo
         // the data of sign
-        // reploy - transaction_index
+        // replay - transaction_index
 
-        // verify the sec256k1 signature
+        // try to build the transaction
         //
-
-        // get the instrction
-        let index = load_current_index_checked(&ctx.accounts.ix_sysvar)?;
-        let ix = load_instruction_at_checked(index as usize, &ctx.accounts.ix_sysvar)?;
-        msg!("instruction index: {}", index);
-
-        let message_hash = {
-            let mut hasher = solana_program::keccak::Hasher::default();
-            hasher.hash(&args.data.as_slice());
-            hasher.result()
-        };
-        msg!("msg hash: {}", to_hex_string(&message_hash.try_to_vec()?));
-
-        let public_key = match secp256k1_recover::secp256k1_recover(
-            message_hash.try_to_vec()?.as_slice(),
-            args.recovery_id,
-            args.signs.as_slice(),
-        ) {
-            Ok(k) => k,
-            Err(e) => {
-                msg!("{}", e);
-                return Err(WalletError::InvalidSignature.into());
-            }
-        };
-        let mut com_public_key = public_key.try_to_vec()?;
-        com_public_key.resize(32, 0);
-        msg!("recover public key: {}", to_hex_string(&com_public_key));
-
-        if com_public_key.as_slice() != args.owner.as_slice() {
-            return Err(WalletError::InvalidSignature.into());
-        }
-
-        // execute this instruction
-        //
-
         let seeds_owner = args.owner.as_slice();
         msg!("{}", seeds_owner.len());
         let seeds = &[
@@ -134,15 +93,52 @@ impl VaultTransaction<'_> {
             }
             instruction_account_infos.push(account_info.clone());
         }
-        invoke_signed(
-            &Instruction {
-                program_id: *ctx.accounts.program.key,
-                accounts: instruction_accounts,
-                data: args.data,
-            },
-            &instruction_account_infos[..],
-            &[seeds],
-        )?;
+        let instruction = Instruction {
+            program_id: *ctx.accounts.program.key,
+            accounts: instruction_accounts,
+            data: args.data,
+        };
+        let mut instruction_raw = bincode::serialize(&instruction).unwrap();
+        let mut transaction_index = ctx.accounts.wallet.transaction_index.try_to_vec()?;
+        instruction_raw.append(&mut transaction_index);
+        msg!("raw instruction: {}", to_hex_string(&instruction_raw));
+
+        // verify the sec256k1 signature
+        //
+        let message_hash = {
+            let mut hasher = solana_program::keccak::Hasher::default();
+            hasher.hash(&instruction_raw.as_slice());
+            hasher.result()
+        };
+        msg!("msg hash: {}", to_hex_string(&message_hash.try_to_vec()?));
+
+        let public_key = match secp256k1_recover::secp256k1_recover(
+            message_hash.try_to_vec()?.as_slice(),
+            args.recovery_id,
+            args.signs.as_slice(),
+        ) {
+            Ok(k) => k,
+            Err(e) => {
+                msg!("{}", e);
+                return Err(WalletError::InvalidSignature.into());
+            }
+        };
+        let mut com_public_key = public_key.try_to_vec()?;
+        com_public_key.resize(32, 0);
+        msg!("recover public key: {}", to_hex_string(&com_public_key));
+
+        if com_public_key.as_slice() != args.owner.as_slice() {
+            return Err(WalletError::InvalidSignature.into());
+        }
+
+        // execute this instruction
+        //
+        invoke_signed(&instruction, &instruction_account_infos[..], &[seeds])?;
+
+        // nonce
+        let wallet = &mut ctx.accounts.wallet;
+        wallet.transaction_index += 1;
+        msg!("new transaction index: {}", wallet.transaction_index);
 
         Ok(())
     }

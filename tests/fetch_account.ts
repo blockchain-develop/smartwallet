@@ -22,9 +22,10 @@ async function main() {
   const smartWalletAddress = new PublicKey('8qY9P9LctEysD9kPpnxAUbHavFTiDC7iQHnba1gBedqV');
   const smartWallet = await program.account.wallet.fetch(smartWalletAddress);
 
-  console.log("transaction index", smartWallet.transactionIndex);
-  console.log("transaction owner", Buffer.from(smartWallet.owner).toString('hex'));
-  console.log("transaction bump", smartWallet.bump);
+  console.log("wallet address: ", smartWalletAddress);
+  console.log("transaction index: ", smartWallet.transactionIndex);
+  console.log("transaction owner: ", Buffer.from(smartWallet.owner).toString('hex'));
+  console.log("transaction bump: ", smartWallet.bump);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
