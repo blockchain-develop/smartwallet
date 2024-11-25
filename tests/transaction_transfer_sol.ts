@@ -73,16 +73,25 @@ async function main() {
     .executeTransaction({
       owner: owner,
       signs: Buffer.from(signObj.signature),
-      data: transferInstuction.data,
       recoveryId: signObj.recoveryId,
+      instructions: [
+        {
+          accountSize: 2,
+          data: transferInstuction.data,
+        }
+      ],
     })
     .accounts({
       wallet: configAddress,
       payer: wallet.publicKey,
-      program: anchor.web3.SystemProgram.programId,
     })
     .remainingAccounts(
       [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: anchor.web3.SystemProgram.programId,
+        },
         {
           isSigner: false,
           isWritable: true,
