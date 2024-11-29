@@ -7,7 +7,8 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct WalletCreateArgs {
-    pub owner: Vec<u8>,
+    pub wallet_id: Vec<u8>,
+    pub verifiers: Vec<Verifier>,
 }
 
 #[derive(Accounts)]
@@ -17,7 +18,7 @@ pub struct WalletCreate<'info> {
         init,
         payer = creator,
         space = Wallet::size(),
-        seeds = [SEED_WALLET, SEED_CONFIG, args.owner.as_slice()],
+        seeds = [SEED_WALLET, SEED_CONFIG, args.wallet_id.as_slice()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
@@ -38,13 +39,13 @@ impl WalletCreate<'_> {
     pub fn create(ctx: Context<Self>, args: WalletCreateArgs) -> Result<()> {
         msg!("create");
 
-        let args_owner = to_hex_string(&args.owner);
+        let args_owner = to_hex_string(&args.wallet_id);
         msg!("parameter owner: {}", args_owner);
 
         // todo
         // this wallet is created?
 
-        let seeds_owner = args.owner.as_slice();
+        let seeds_owner = args.wallet_id.as_slice();
         msg!("{}", seeds_owner.len());
 
         let seeds = &[SEED_WALLET, SEED_OWNER, seeds_owner];
@@ -56,7 +57,7 @@ impl WalletCreate<'_> {
         // Initialize the wallet info.
         let wallet = &mut ctx.accounts.wallet;
         wallet.transaction_index = 0;
-        wallet.owner = args.owner;
+        wallet.owner = args.verifiers;
         wallet.bump = wallet_owner_bump;
 
         Ok(())
